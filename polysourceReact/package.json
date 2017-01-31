@@ -1,0 +1,25 @@
+{
+  "name": "polysource",
+  "version": "1.0.0",
+  "description": "political news, batched by headline, bipartisan ux",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel server -d lib",
+    "start": "node lib/server.js"
+  },
+  "author": "@lilcpu",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-cli": "^6.22.2",
+    "babel-preset-env": "^1.1.8"
+  },
+  "dependencies": {
+    "es6-promise": "^4.0.5",
+    "fs": "0.0.1-security",
+    "isomorphic-fetch": "^2.2.1",
+    "lda": "^0.1.9",
+    "whatwg-fetch": "^2.0.2",
+    "xml2js": "^0.4.17"
+  }
+}
