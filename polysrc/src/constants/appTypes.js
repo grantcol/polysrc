@@ -1,0 +1,10 @@
+export const GET_STORIES = 'GET_STORIES';
+export const GET_STORY = 'GET_STORY';
+export const GET_CHANNEL = 'GET_STORY_FROM_FEED';
+export const GET_TOPICS = 'GET_TOPICS';
+export const GET_TOPIC = 'GET_TOPIC';
+export const RECEIVE_STORIES = 'RECEIVE_STORIES';
+export const RECEIVE_STORY = 'RECEIVE_STORY';
+export const RECEIVE_CHANNEL= 'RECEIVE_STORY_FROM_FEED';
+export const RECEIVE_TOPICS = 'RECEIVE_TOPICS';
+export const RECEIVE_TOPIC = 'RECEIVE_TOPIC';

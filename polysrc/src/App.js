@@ -1,31 +1,30 @@
 import React, { Component } from 'react';
+import {connect} from 'react-redux';
+import {fetchStories} from './actions/app.js';
 import Story from './components/Story.js';
 import Jumbotron from './components/Jumbotron.js';
 import logo from './logo.svg';
+import io from 'socket.io-client'
 import './App.css';
 
-
-/*function getStories(){
-  return fetch('localhost:8080/stories')
-          .then(function(res){ return res.text() })
-          .then(function(body){
-
-          })
-}*/
+let socket = io(`http://localhost:8080`)
 
 class App extends Component {
 
   componentDidMount(){
-    console.log(this.state);
+    console.log(this.props);
   }
 
   constructor(props) {
     super(props);
     /*let t = this.getStories();*/
-    this.state = {
+    /*this.state = {
       stories: []
-    };
-    this.getStories();
+    };*/
+    this.props.fetchStories();
+    socket.on(`server:event`, data => {
+      console.log(data);
+    });
   }
 
   getStories() {
@@ -42,7 +41,7 @@ class App extends Component {
   }
 
   renderStories() {
-    let stories = this.state.stories;
+    let stories = this.props.stories;
     //console.log(stories[0]);
     if(stories.length > 0){
       let topStory = <Jumbotron story={stories.reverse().pop()}/>
@@ -106,4 +105,18 @@ class App extends Component {
   }
 }
 
-export default App;
+const mapStateToProps = (state) => {
+  return {
+    stories : state.stories
+  }
+}
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    fetchStories: () => {
+      dispatch(fetchStories())
+    }
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
