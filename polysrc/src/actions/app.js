@@ -25,8 +25,17 @@ export function getStory(id){
 export function receiveStory(story, status){
   return {
     type : constants.RECEIVE_STORY,
-    stories : story,
+    story : story,
     status : status
+  }
+}
+
+export function receiveNewStories(stories, status) {
+  return {
+    type : constants.RECEIVE_NEW_STORIES,
+    stories : stories,
+    status : status,
+    count : stories.length
   }
 }
 
