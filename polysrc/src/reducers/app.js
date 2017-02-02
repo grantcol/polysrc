@@ -16,6 +16,11 @@ export function polysrc(state = initialState, action) {
         stories : action.stories,
         status : action.status
       });
+    case constants.RECEIVE_NEW_STORIES :
+      return Object.assign({}, state, {
+        stories : action.stories.concat(state.stories),
+        status : action.status
+      });
     case constants.GET_STORY :
       return Object.assign({}, state, {
         status : action.status
