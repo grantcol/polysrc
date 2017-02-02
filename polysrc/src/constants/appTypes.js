@@ -8,3 +8,5 @@ export const RECEIVE_STORY = 'RECEIVE_STORY';
 export const RECEIVE_CHANNEL= 'RECEIVE_STORY_FROM_FEED';
 export const RECEIVE_TOPICS = 'RECEIVE_TOPICS';
 export const RECEIVE_TOPIC = 'RECEIVE_TOPIC';
+export const SHOW_ALERT = 'SHOW_ALERT';
+export const HIDE_ALERT = 'HIDE_ALERT';

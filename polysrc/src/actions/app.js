@@ -1,5 +1,19 @@
 import * as constants from '../constants/appTypes.js';
 
+export function showAlert(){
+  return {
+    type : constants.SHOW_ALERT,
+    alert : 'show'
+  }
+}
+
+export function hideAlert(){
+  return {
+    type : constants.HIDE_ALERT,
+    alert : 'hide'
+  }
+}
+
 export function getStories(){
   return {
     type : constants.GET_STORIES,

@@ -17,6 +17,18 @@
   font-size: large;
 }
 
+.ps-new-stories-link {
+  width: 100%;
+  text-align: center;
+  color: #FF3333;
+  font-size: 14px;
+  margin-bottom: 15 !important;
+
+}
+.ps-new-stories-link :hover {
+  text-decoration: none !important;
+}
+
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

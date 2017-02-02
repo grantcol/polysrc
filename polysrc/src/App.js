@@ -1,29 +1,29 @@
 import React, { Component } from 'react';
 import {connect} from 'react-redux';
-import {fetchStories} from './actions/app.js';
+import {fetchStories, receiveNewStories, showAlert, hideAlert} from './actions/app.js';
 import Story from './components/Story.js';
 import Jumbotron from './components/Jumbotron.js';
 import logo from './logo.svg';
 import io from 'socket.io-client'
 import './App.css';
 
+const LOCAL_IP = '192.168.1.71:3000';
+const LOCALHOST = 'http://localhost:8080';
 let socket = io(`http://localhost:8080`)
 
 class App extends Component {
 
   componentDidMount(){
-    console.log(this.props);
+    //console.log(this.props);
   }
 
   constructor(props) {
     super(props);
-    /*let t = this.getStories();*/
-    /*this.state = {
-      stories: []
-    };*/
     this.props.fetchStories();
-    socket.on(`server:event`, data => {
-      console.log(data);
+    socket.on(`feed-update`, data => {
+      console.log('got an update', data);
+      this.props.showAlert();
+      //if(data.count > 0) this.props.receiveNewStories(data.stories, 'complete');
     });
   }
 
@@ -40,14 +40,20 @@ class App extends Component {
             });
   }
 
+  renderAlert() {
+    let alert = this.props.alert === 'show' ? <a href="#" className="btn btn-link ps-new-stories-link" onClick={this.props.hideAlert}> New Stories </a> : ""
+    return alert;
+  }
+
   renderStories() {
     let stories = this.props.stories;
     //console.log(stories[0]);
     if(stories.length > 0){
-      let topStory = <Jumbotron story={stories.reverse().pop()}/>
-      let allStories =  stories.map(function(story){
-        return <Story story={story}/>;
-      });
+      let topStory = <Jumbotron story={stories[0]}/>
+      let allStories =  []
+      for(let i = 1; i < stories.length; i++) {
+        allStories.push(<Story story={stories[i]}/>)
+      }
       return {'top':topStory, 'stories':allStories};
     } else {
       return {'top':[], 'stories':[]};
@@ -56,6 +62,7 @@ class App extends Component {
 
   render() {
     let stories = this.renderStories();
+
     return (
       <div className="App">
         <div className="container">
@@ -76,6 +83,7 @@ class App extends Component {
             <p className="lead">Cras justo odio, dapibus ac facilisis in, egestas eget quam. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
             <p><a className="btn btn-lg btn-success" href="#" role="button">Read</a></p>
           </div>*/}
+          {this.renderAlert()}
           {stories.top}
           <div className="row marketing">
             <div className="col-lg-12">
@@ -107,7 +115,8 @@ class App extends Component {
 
 const mapStateToProps = (state) => {
   return {
-    stories : state.stories
+    stories : state.stories,
+    alert : state.alert
   }
 }
 
@@ -115,6 +124,15 @@ const mapDispatchToProps = (dispatch) => {
   return {
     fetchStories: () => {
       dispatch(fetchStories())
+    },
+    receiveNewStories: (stories, status) => {
+      dispatch(receiveNewStories(stories, 'complete'))
+    },
+    showAlert: () => {
+      dispatch(showAlert());
+    },
+    hideAlert: () => {
+      dispatch(hideAlert());
     }
   }
 }

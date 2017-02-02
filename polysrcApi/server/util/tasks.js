@@ -1,7 +1,9 @@
 import later from 'later';
 import {updatePayload, allChannels} from '../data/localData.js';
+require('es6-promise').polyfill();
+require('isomorphic-fetch');
 
-export function checkFeed(feeds = [], env = 'DEV', update = null) {
+export function checkFeeds(feeds = [], env = 'DEV', update = null) {
   switch(env){
     case 'DEV' :
       if(feeds.length <= 0) {
@@ -22,6 +24,22 @@ export function checkFeed(feeds = [], env = 'DEV', update = null) {
     default :
       return [];
   }
+}
+
+export function fetchNews(name, url) {
+    console.log(`fetching new news from ${name} @ ${url}`);
+    return fetch(url)
+            .then(function(result){ return res.text() })
+            .then(function(body){
+              console.log(body);
+            })
+            .catch(function(err){
+              console.log(err)
+            });
+}
+
+export function configureSchedule() {
+    //configure a later object here and return it for server
 }
 
 export function emitFeedUpdate(socket, payload) {

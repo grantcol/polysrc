@@ -1,7 +1,8 @@
 import * as constants from '../constants/appTypes.js';
 
 const initialState = {
-  stories : []
+  stories : [],
+  alert: 'hide'
 }
 
 export function polysrc(state = initialState, action) {
@@ -24,6 +25,14 @@ export function polysrc(state = initialState, action) {
       return Object.assign({}, state, {
         stories : stories,
         status : action.status
+      });
+    case constants.SHOW_ALERT:
+      return Object.assign({}, state, {
+        alert: action.alert
+      });
+    case constants.HIDE_ALERT:
+      return Object.assign({}, state, {
+        alert: action.alert
       });
     default:
       return state;

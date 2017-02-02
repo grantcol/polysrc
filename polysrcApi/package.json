@@ -15,6 +15,7 @@
     "babel-preset-env": "^1.1.8"
   },
   "dependencies": {
+    "agenda": "^0.9.0",
     "es6-promise": "^4.0.5",
     "fs": "0.0.1-security",
     "isomorphic-fetch": "^2.2.1",
