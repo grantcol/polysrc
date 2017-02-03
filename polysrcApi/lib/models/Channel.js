@@ -12,7 +12,7 @@ var channelSchema = _mongoose2.default.Schema({
   url: String,
   image: String,
   bias: String,
-  stories: [{ type: _mongoose2.default.Schema.Types.ObjectId, ref: 'Story' }],
+  stories: [{ type: _mongoose2.default.Schema.Types.ObjectId, ref: 'Story', unique: true }],
   rss: String,
   shortName: String,
   lastBuildDate: Date

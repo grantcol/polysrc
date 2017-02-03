@@ -9,7 +9,7 @@ let channelSchema = mongoose.Schema({
   url: String,
   image: String,
   bias: String,
-	stories : [{ type: mongoose.Schema.Types.ObjectId, ref: 'Story' }],
+	stories : [{ type: mongoose.Schema.Types.ObjectId, ref: 'Story', unique:true}],
 	rss: String,
 	shortName: String,
 	lastBuildDate: Date

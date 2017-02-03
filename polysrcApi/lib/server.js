@@ -53,7 +53,6 @@ app.use(function (req, res, next) {
 });
 
 app.get('/', function (req, res) {
-  console.log('yo');
   (0, _request2.default)('http://rss.cnn.com/rss/cnn_topstories.rss', function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var parseString = _xml2js2.default.parseString;
@@ -71,7 +70,7 @@ app.get('/', function (req, res) {
 
 app.get('/stories', function (req, res) {
   if (connection) {
-    _Story2.default.find({}, function (error, docs) {
+    _Story2.default.find({}).sort({ pubDate: -1 }).populate('_creator').limit(25).exec(function (error, docs) {
       if (!error) {
         res.status(200).send(docs);
       } else {

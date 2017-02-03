@@ -9,15 +9,17 @@ export default class Story extends React.Component {
   render() {
     console.log(this.props)
     const story = this.props.story;
+    console.log(story.media);
+    let image = story.media.length > 0 ? story.media[0][0].url : 'https://image.freepik.com/free-vector/earth-design-made-of-polygons_1010-432.jpg';
     return (
       <div className="media">
         <div className="media-left">
           <a href="#">
-            <img className="media-object" src={story.media[0].url} width={90} height={75}/>
+            <img className="media-object" src={image} width={90} height={75}/>
           </a>
         </div>
         <div className="media-body">
-          <h4 className="media-heading">{story.title}</h4>
+          <h4 className="media-heading"><a href={story.url} target="_blank">{story.title}</a></h4>
           {story.description.split('<')[0]}
         </div>
       </div>

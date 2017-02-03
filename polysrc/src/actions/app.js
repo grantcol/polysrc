@@ -75,6 +75,7 @@ export function fetchStories() {
     fetch('http://localhost:8080/stories')
           .then(function(response){ return response.json() })
           .then(function(json){
+             console.log(json);
             dispatch(receiveStories(json, 'complete'))
           })
           .catch(function(err){

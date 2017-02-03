@@ -19,3 +19,14 @@ export const allChannels = {
   "drudge":"http://feeds.feedburner.com/DrudgeReportFeed",
   "slate":"http://feeds.slate.com/slate-101526"
 }
+
+export const channelIds = {
+  "fox":"588fe9ebf99b30240fe909fe",
+  "cnn":"588fe9ebf99b30240fe909ff",
+  "bbc":"588fe9ecf99b30240fe90a04",
+  "hill":"588fe9ebf99b30240fe909fd",
+  "breitbart":"588fe9ebf99b30240fe90a02",
+  "npr":"588fe9ebf99b30240fe90a00",
+  "drudge":"588fe9ebf99b30240fe90a01",
+  "slate":"588fe9ebf99b30240fe90a03"
+}
