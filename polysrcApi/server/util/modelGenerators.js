@@ -2,7 +2,7 @@ import Story from "../models/Story.js";
 import Channel from "../models/Channel.js";
 import mongoose from 'mongoose';
 
-export function makeStory(raw, source) {
+export function makeStory(raw, source, sourceName) {
   let story = new Story({
     title: raw.title,
     author: !raw['dc:creator'] ? 'N/A' : raw['dc:creator'],
@@ -11,6 +11,7 @@ export function makeStory(raw, source) {
     category: 'Politics',
     pubDate: raw.pubDate,
     media: extractImages(raw),
+    source: sourceName,
     _creator: str2ObjId(source) //id of the channel who created it
   });
   return story;

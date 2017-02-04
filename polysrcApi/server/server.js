@@ -2,26 +2,27 @@ import express  from "express";
 import request  from "request";
 import xml2js from "xml2js";
 import mongoose from "mongoose";
-import agenda from 'agenda';
 import Story from './models/Story.js';
 import Channel from './models/Channel';
-import {updatePayload} from './data/localData.js';
-import {DB_URI} from './polysrc_config.js';
+import { updatePayload } from './data/localData.js';
+import { DB_URI } from './polysrc_config.js';
+import Manager from './util/manager.js';
+import * as jobs from './util/jobs.js';
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
 let app = express();
 let server = app.listen(8080);
 let io = require('socket.io').listen(server);
-let connection = false;
 let updated = false;
 
-mongoose.connect(DB_URI, (err) => { connection = err ? false : true } );
-//console.log('connected?', connection);
+let db = mongoose.createConnection(DB_URI);
 
 io.on('connection', function(socket){
   console.log('a user connected');
-  socket.emit('feed-update', updatePayload);
+  jobs.updateFeed(socket);
+  //jobs.testUpdate(10000, socket);
+  //socket.emit('feed-update', updatePayload);
 });
 
 app.use(function(req, res, next) {
@@ -48,7 +49,7 @@ app.get('/', function(req, res){
 });
 
 app.get('/stories', function(req, res){
-  if(connection){
+  if(db){
     Story.find({}).sort({pubDate: -1}).populate('_creator').limit(25).exec((error, docs) => {
       if(!error){
         res.status(200).send(docs);
@@ -60,7 +61,7 @@ app.get('/stories', function(req, res){
 });
 
 app.get('/story/:id', function(req, res){
-    if(connection){
+    if(db){
       Story.findById(req.params.id).populate('_creator').exec((error, docs) => {
         if(!error){
           res.status(200).send(docs)
@@ -72,7 +73,7 @@ app.get('/story/:id', function(req, res){
 })
 
 app.get('/channel/:id', function(req, res){
-  if(connection){
+  if(db){
     Channel.findById(req.params.id, function(error, docs){
       if(!error){
         res.status(200).send(docs);

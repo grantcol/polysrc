@@ -25,6 +25,9 @@ class App extends Component {
       this.props.showAlert();
       //if(data.count > 0) this.props.receiveNewStories(data.stories, 'complete');
     });
+    socket.on('test-update', data => {
+      console.log(data.status, data.msg);
+    });
   }
 
   getStories() {
@@ -52,7 +55,7 @@ class App extends Component {
       let topStory = <Jumbotron story={stories[0]}/>
       let allStories =  []
       for(let i = 1; i < stories.length; i++) {
-        allStories.push(<Story story={stories[i]}/>)
+        allStories.push(<Story key={stories[i].url} story={stories[i]}/>)
       }
       return {'top':topStory, 'stories':allStories};
     } else {

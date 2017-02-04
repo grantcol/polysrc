@@ -4,14 +4,17 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.fetchFeeds = fetchFeeds;
-exports.testFetchFeeds = testFetchFeeds;
 exports.injestNews = injestNews;
 exports.fetchNews = fetchNews;
-exports.setLastUpdate = setLastUpdate;
+exports.updateBuildDates = updateBuildDates;
+exports.updateBuildDate = updateBuildDate;
+exports.getChannelStories = getChannelStories;
+exports.getStoriesAfter = getStoriesAfter;
+exports.testFetchFeeds = testFetchFeeds;
 exports.killDupeChilds = killDupeChilds;
 exports.getStory = getStory;
-exports.updateLastBuildDate = updateLastBuildDate;
 exports.removeChannel = removeChannel;
+exports.cleanDB = cleanDB;
 
 var _Story = require('../models/Story');
 
@@ -37,6 +40,10 @@ var _fs = require('fs');
 
 var _fs2 = _interopRequireDefault(_fs);
 
+var _moment = require('moment');
+
+var _moment2 = _interopRequireDefault(_moment);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -49,25 +56,113 @@ require('isomorphic-fetch');
 
 function fetchFeeds(channels) {
   var promises = [];
-  //let channels = Object.keys(allChannels);
   channels.forEach(function (channel) {
-    console.log(channel);
-    var url = channel.rss;
-    var name = channel.shortName;
-    promises.push(fetchNews(name, url, channel.lastBuildDate));
+    /*let url = channel.rss;
+    let name = channel.shortName;*/
+    var url = channel.rss,
+        name = channel.shortName,
+        lastBuildDate = channel.lastBuildDate;
+    //console.log('NAME', name)
+
+    promises.push(fetchNews(name, url, lastBuildDate));
   });
-  Promise.all(promises).then(function (data) {
-    //parse new data and send down the new stuff
-    var json = data.map(function (entry) {
-      //let jsonEntry = { name : entry.name, json : parser.toJson(entry.xml, {object:true}) };
-      console.log(entry.lastBuildDate);
-      return { name: entry.name, json: parser.toJson(entry.xml, { object: true }), lastBuildDate: entry.lastBuildDate };
+  return Promise.all(promises).then(function (data) {
+    //injest the new news and return an array of story.save() promises
+    var injested = [];
+    data.forEach(function (entry) {
+      var name = entry.name,
+          lastBuildDate = entry.lastBuildDate,
+          xml = entry.xml;
+
+      var json = parser.toJson(xml, { object: true });
+      injested = injested.concat(injestNews(name, json, lastBuildDate));
     });
-    //let writable = JSON.stringify({'values':json});
-    //fs.writeFile(`${__dirname}/../data/stories.json`, writable, 'utf8', function(){ console.log('done') });
-    json.forEach(function (channel) {
-      injestNews(channel.name, channel.json, channel.lastBuildDate);
+    //injested is an array of Promises from injestNews(channels) for each channel that we can return for the caller to finish up its work
+    return injested;
+  });
+}
+
+function injestNews(name, json, lastBuildDate) {
+  console.log('injesting news from ' + name);
+  var stories = json.rss.channel.item;
+  var storyModels = [];
+  stories.forEach(function (story) {
+    if ((0, _moment2.default)(story.pubDate).isAfter(lastBuildDate)) {
+      var storyModel = (0, _modelGenerators.makeStory)(story, _localData.channelIds[name], name);
+      console.log('\t id: ' + storyModel._id + ' title: ' + storyModel.title);
+      storyModels.push(storyModel.save());
+    }
+  });
+  //console.log(storyModels);
+  return storyModels;
+}
+
+function fetchNews(name, url, lastBuildDate) {
+  console.log('fetching new news from ' + name + ' @ ' + url);
+  return fetch(url).then(function (result) {
+    return result.text();
+  }).then(function (xml) {
+    return { 'name': name, 'xml': xml, lastBuildDate: lastBuildDate };
+  }).catch(function (err) {
+    return err;
+  });
+}
+
+/*
+  intended use is like so
+  updateBuildDates()
+    .then((result) => {
+    console.log(result);
+      //do something
+    })
+    .catch((err) => {
+      console.log(err)
     });
+*/
+function updateBuildDates() {
+  return _Channel2.default.find({}).exec().then(function (docs) {
+    return docs.map(function (doc) {
+      return getChannelStories(doc.shortName);
+    });
+  }).then(function (docPromises) {
+    return Promise.all(docPromises);
+  }).then(function (docs) {
+    console.log('successfully updated pubDates');
+  }).catch(function (err) {
+    console.log('error in updating pubDates');
+  });
+}
+
+function updateBuildDate(channel) {
+  _Story2.default.find({ source: channel }).populate('_creator').sort({ pubDate: -1 }).exec().then(function (docs) {
+    //.format("dddd, MMMM Do YYYY, h:mm:ss a")
+    var source = (0, _moment2.default)(docs[0]._creator.lastBuildDate);
+    docs.forEach(function (doc) {
+      var date = (0, _moment2.default)(doc.pubDate);
+      var isAfter = date.isAfter(source);
+      if (isAfter) {
+        doc._creator.lastBuildDate = new Date(doc.pubDate);
+        doc._creator.save(function (err) {
+          if (err) console.log(err);else console.log(_doc._creator.lastBuildDate);
+        });
+      }
+    });
+  });
+}
+
+function getChannelStories(channel) {
+  return _Story2.default.findOne({ source: channel }).populate('_creator').sort({ pubDate: -1 }).exec().then(function (doc) {
+    console.log(doc._creator.shortName, (0, _moment2.default)(doc.pubDate).format("dddd, MMMM Do YYYY, h:mm:ss a"), (0, _moment2.default)(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"));
+    doc._creator.lastBuildDate = new Date(doc.pubDate);
+    return doc._creator.save();
+  }).catch(function (err) {
+    console.log(err);
+  });
+}
+
+function getStoriesAfter(dateTime) {
+  return Stories.find({ created_at: { $gt: dateTime } }).populate('_creator').sort({ pubDate: -1 }).exec().then(function (docs) {
+    return docs;
   });
 }
 
@@ -85,57 +180,7 @@ function testFetchFeeds() {
   });
 }
 
-function injestNews(name, json, lastBuildDate) {
-  console.log('injesting news from ' + name);
-  var stories = json.rss.channel.item;
-  var storyModels = stories.map(function (story) {
-    if (new Date(story.pubDate) > new Date(lastBuildDate)) {
-      var storyModel = (0, _modelGenerators.makeStory)(story, _localData.channelIds[name]);
-      console.log('\t id: ' + storyModel._id + ' title: ' + storyModel.title);
-      return storyModel.save();
-    }
-  });
-  //console.log(storyModels);
-  Promise.all(storyModels).then(function (result) {
-    console.log('RESULTS \n', result);
-    updateLastBuildDate(name);
-  }).catch(function (err) {
-    console.log(err);
-  });
-}
-
-function fetchNews(name, url, lastBuildDate) {
-  console.log('fetching new news from ' + name + ' @ ' + url);
-  return fetch(url).then(function (result) {
-    return result.text();
-  }).then(function (xml) {
-    return { 'name': name, 'xml': xml, lastBuildDate: lastBuildDate };
-  }).catch(function (err) {
-    return err;
-  });
-}
-
-function setLastUpdate(channels) {
-  //channels is a list of names of the channels to check out
-  channels.forEach(function (channel) {
-    //Tank.find({ size: 'small' }).where('createdDate').gt(oneYearAgo).exec(callback);
-    _Channel2.default.findOne({ shortName: channel }).exec(function (err, doc) {
-      console.log(doc.shortName, doc.stories.length);
-      /*let first = doc.stories[0];
-      for(let i = 1; i < doc.stories.length; i++) {
-        let d1 = new Date(first.pubDate);
-        let d2 = new Date(doc.stories[i].pubDate);
-        console.log(first.pubDate, doc.stories[i].pubDate, d1, d2, d1 < d2, d1 > d2);
-      }*/
-    });
-  });
-}
-/*let first = doc.stories[0];
-for(let i = 1; i < doc.stories.length; i++) {
-  let d1 = new Date(first.pubDate);
-  let d2 = new Date(doc.stories[i].pubDate);
-  console.log(first.pubDate, doc.stories[i].pubDate, d1, d2, d1 < d2, d1 > d2);
-}*/
+/*********************************************************/
 function killDupeChilds(err, doc) {
   console.log(err, doc.shortName, doc.stories.length);
   var dupes = {};
@@ -164,21 +209,9 @@ function getStory() {
       docs.forEach(function (doc) {
         var creator = doc._creator;
         doc.source = creator.shortName;
-        doc.save();
-        //creator.stories.push(doc);
-        //creator.save((err) => {console.log('saved', doc.title);});
-      });
-    }
-  });
-  return;
-}
-
-function updateLastBuildDate(channel) {
-  _Story2.default.findOne({ source: channel }).populate('_creator').sort({ pubDate: -1 }).exec(function (err, doc) {
-    if (!err) {
-      doc._creator.lastBuildDate = doc.pubDate;
-      doc._creator.save(function (err) {
-        console.log('updated successfully bruh');
+        doc.save(function (err) {
+          console.log('saved');
+        });
       });
     }
   });
@@ -196,7 +229,25 @@ function removeChannel(channel) {
     });
   });
 }
-removeChannel('drudge');
+
+function cleanDB() {
+  _Story2.default.find({}).exec(function (err, docs) {
+    docs.forEach(function (doc) {
+      if (doc.source === undefined) {
+        doc.remove(function (removed) {
+          console.log('removed');
+        });
+      }
+    });
+  });
+}
+
+//getStory();
+//updateBuildDates();
+//cleanDB();
+//['cnn', 'fox', 'npr', 'breitbart', 'bbc', 'slate', 'hill'].forEach((channel) => {updateBuildDate(channel)});
+//updateBuildDates();
+//removeChannel('drudge');
 /*Channel.find({}).exec().then((docs) => {
   console.log(docs)
   fetchFeeds(docs);

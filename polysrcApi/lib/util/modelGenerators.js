@@ -26,7 +26,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function makeStory(raw, source) {
+function makeStory(raw, source, sourceName) {
   var story = new _Story2.default({
     title: raw.title,
     author: !raw['dc:creator'] ? 'N/A' : raw['dc:creator'],
@@ -35,6 +35,7 @@ function makeStory(raw, source) {
     category: 'Politics',
     pubDate: raw.pubDate,
     media: extractImages(raw),
+    source: sourceName,
     _creator: str2ObjId(source) //id of the channel who created it
   });
   return story;

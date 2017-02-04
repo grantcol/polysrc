@@ -26,6 +26,18 @@ var _Channel2 = _interopRequireDefault(_Channel);
 
 var _localData = require("./data/localData.js");
 
+var _polysrc_config = require("./polysrc_config.js");
+
+var _manager = require("./util/manager.js");
+
+var _manager2 = _interopRequireDefault(_manager);
+
+var _jobs = require("./util/jobs.js");
+
+var jobs = _interopRequireWildcard(_jobs);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 require('es6-promise').polyfill();
@@ -34,16 +46,15 @@ require('isomorphic-fetch');
 var app = (0, _express2.default)();
 var server = app.listen(8080);
 var io = require('socket.io').listen(server);
-var connection = false;
 var updated = false;
-_mongoose2.default.connect("mongodb://grantcol:weezybaby21@ds137759.mlab.com:37759/polysrc", function (err) {
-  connection = err ? false : true;
-});
-//console.log('connected?', connection);
+
+var db = _mongoose2.default.createConnection(_polysrc_config.DB_URI);
 
 io.on('connection', function (socket) {
   console.log('a user connected');
-  socket.emit('feed-update', _localData.updatePayload);
+  jobs.updateFeed(socket);
+  //jobs.testUpdate(10000, socket);
+  //socket.emit('feed-update', updatePayload);
 });
 
 app.use(function (req, res, next) {
@@ -69,7 +80,7 @@ app.get('/', function (req, res) {
 });
 
 app.get('/stories', function (req, res) {
-  if (connection) {
+  if (db) {
     _Story2.default.find({}).sort({ pubDate: -1 }).populate('_creator').limit(25).exec(function (error, docs) {
       if (!error) {
         res.status(200).send(docs);
@@ -80,13 +91,25 @@ app.get('/stories', function (req, res) {
   }
 });
 
-app.get('/channels', function (req, res) {
-  if (connection) {
-    _Channel2.default.find({}, function (error, docs) {
+app.get('/story/:id', function (req, res) {
+  if (db) {
+    _Story2.default.findById(req.params.id).populate('_creator').exec(function (error, docs) {
       if (!error) {
         res.status(200).send(docs);
       } else {
-        res.status(500).send(error);
+        res.status(404).send(error);
+      }
+    });
+  }
+});
+
+app.get('/channel/:id', function (req, res) {
+  if (db) {
+    _Channel2.default.findById(req.params.id, function (error, docs) {
+      if (!error) {
+        res.status(200).send(docs);
+      } else {
+        res.status(404).send(error);
       }
     });
   }

@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 export default class Jumbotron extends React.Component {
 
   render() {
-    console.log(this.props)
+    //console.log(this.props)
     const story = this.props.story;
     let image = story.media.length > 0 ? story.media[0][0].url : 'https://image.freepik.com/free-vector/earth-design-made-of-polygons_1010-432.jpg';
     let jumbotronStyle = {

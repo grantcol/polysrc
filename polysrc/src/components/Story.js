@@ -7,9 +7,9 @@ export default class Story extends React.Component {
   }
 
   render() {
-    console.log(this.props)
+    //console.log(this.props)
     const story = this.props.story;
-    console.log(story.media);
+    //console.log(story.media);
     let image = story.media.length > 0 ? story.media[0][0].url : 'https://image.freepik.com/free-vector/earth-design-made-of-polygons_1010-432.jpg';
     return (
       <div className="media">

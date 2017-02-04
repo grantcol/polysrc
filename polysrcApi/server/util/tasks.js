@@ -5,6 +5,7 @@ import { makeStory, extractImages } from './modelGenerators.js';
 import * as parser from 'xml2json';
 import mongoose from 'mongoose';
 import fs from 'fs';
+import moment from 'moment';
 mongoose.Promise = global.Promise;
 mongoose.connect("mongodb://grantcol:weezybaby21@ds137759.mlab.com:37759/polysrc");
 
@@ -13,26 +14,111 @@ require('isomorphic-fetch');
 
 export function fetchFeeds(channels) {
     let promises = [];
-    //let channels = Object.keys(allChannels);
     channels.forEach(function(channel){
-      //console.log(channel);
-      let url = channel.rss;
-      let name = channel.shortName;
-      promises.push(fetchNews(name, url, channel.lastBuildDate));
+      /*let url = channel.rss;
+      let name = channel.shortName;*/
+      let { rss:url, shortName:name, lastBuildDate } = channel;
+      //console.log('NAME', name)
+      promises.push(fetchNews(name, url, lastBuildDate));
     });
-    Promise.all(promises).then(data => {
-      //parse new data and send down the new stuff
-      let json = data.map((entry) => {
-        //let jsonEntry = { name : entry.name, json : parser.toJson(entry.xml, {object:true}) };
-        console.log(entry.lastBuildDate)
-        return { name : entry.name, json : parser.toJson(entry.xml, {object:true}), lastBuildDate: entry.lastBuildDate};
+    return Promise.all(promises).then(data => {
+      //injest the new news and return an array of story.save() promises
+      let injested =[];
+      data.forEach((entry) => {
+        let { name, lastBuildDate, xml } = entry;
+        let json = parser.toJson(xml, {object:true});
+        injested = injested.concat(injestNews(name, json, lastBuildDate));
       });
-      //let writable = JSON.stringify({'values':json});
-      //fs.writeFile(`${__dirname}/../data/stories.json`, writable, 'utf8', function(){ console.log('done') });
-      json.forEach((channel) => {
-        injestNews(channel.name, channel.json, channel.lastBuildDate);
-      })
+      //injested is an array of Promises from injestNews(channels) for each channel that we can return for the caller to finish up its work
+      return injested;
     });
+}
+
+
+export function injestNews(name, json, lastBuildDate) {
+  console.log(`injesting news from ${name}`);
+  let stories = json.rss.channel.item;
+  let storyModels = [];
+  stories.forEach((story) => {
+    if(moment(story.pubDate).isAfter(lastBuildDate)){
+      let storyModel = makeStory(story, channelIds[name], name);
+      console.log(`\t id: ${storyModel._id} title: ${storyModel.title}`)
+       storyModels.push(storyModel.save());
+    }
+  });
+  //console.log(storyModels);
+  return storyModels;
+}
+
+export function fetchNews(name, url, lastBuildDate) {
+    console.log(`fetching new news from ${name} @ ${url}`);
+    return fetch(url)
+            .then((result) => result.text())
+            .then((xml) => { return { 'name':name, 'xml':xml, lastBuildDate: lastBuildDate } } )
+            .catch((err) => err);
+}
+
+/*
+  intended use is like so
+  updateBuildDates()
+    .then((result) => {
+    console.log(result);
+      //do something
+    })
+    .catch((err) => {
+      console.log(err)
+    });
+*/
+export function updateBuildDates() {
+  return Channel.find({})
+         .exec()
+         .then((docs) => { return docs.map((doc) => { return getChannelStories(doc.shortName) }); })
+         .then((docPromises) => { return Promise.all(docPromises); })
+         .then((docs) => { console.log('successfully updated pubDates') })
+         .catch((err) => { console.log('error in updating pubDates')});
+}
+
+export function updateBuildDate(channel) {
+    Story.find({source:channel})
+    .populate('_creator')
+    .sort({pubDate:-1})
+    .exec()
+    .then((docs) => {
+      //.format("dddd, MMMM Do YYYY, h:mm:ss a")
+      let source = moment(docs[0]._creator.lastBuildDate);
+      docs.forEach((doc) => {
+        let date = moment(doc.pubDate);
+        let isAfter = date.isAfter(source);
+        if(isAfter) {
+          doc._creator.lastBuildDate = new Date(doc.pubDate);
+          doc._creator.save((err) => {
+            if(err) console.log(err)
+            else console.log(_doc._creator.lastBuildDate);
+          });
+        }
+      });
+    })
+}
+
+export function getChannelStories(channel) {
+  return Story.findOne({source:channel})
+              .populate('_creator')
+              .sort({pubDate:-1})
+              .exec()
+              .then((doc) => {
+                console.log(doc._creator.shortName, moment(doc.pubDate).format("dddd, MMMM Do YYYY, h:mm:ss a"), moment(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"))
+                doc._creator.lastBuildDate = new Date(doc.pubDate);
+                return doc._creator.save()
+              })
+              .catch((err) => {console.log(err)});
+}
+
+export function getStoriesAfter(dateTime) {
+    return Stories.find({ created_at: { $gt: dateTime }})
+                  .populate('_creator')
+                  .sort({ pubDate:-1 })
+                  .exec()
+                  .then((docs) => { return docs; })
 }
 
 export function testFetchFeeds() {
@@ -47,60 +133,9 @@ export function testFetchFeeds() {
       });
       console.log(storyModels);
     });
-
 }
 
-export function injestNews(name, json, lastBuildDate) {
-  console.log(`injesting news from ${name}`);
-  let stories = json.rss.channel.item;
-  let storyModels = stories.map((story) => {
-    if(new Date(story.pubDate) > new Date(lastBuildDate)){
-      let storyModel =  makeStory(story, channelIds[name]);
-      console.log(`\t id: ${storyModel._id} title: ${storyModel.title}`)
-      return storyModel.save();
-    }
-  });
-  //console.log(storyModels);
-  Promise.all(storyModels)
-         .then((result) => {
-           console.log('RESULTS \n', result)
-           updateLastBuildDate(name);
-         })
-         .catch((err) => {
-           console.log(err)
-         })
-}
-
-export function fetchNews(name, url, lastBuildDate) {
-    console.log(`fetching new news from ${name} @ ${url}`);
-    return fetch(url)
-            .then((result) => result.text())
-            .then((xml) => { return { 'name':name, 'xml':xml, lastBuildDate: lastBuildDate } } )
-            .catch((err) => err);
-}
-
-export function setLastUpdate(channels) {
-  //channels is a list of names of the channels to check out
-  channels.forEach((channel) => {
-    //Tank.find({ size: 'small' }).where('createdDate').gt(oneYearAgo).exec(callback);
-    Channel.findOne({shortName:channel})
-            .exec((err, doc) => {
-              console.log(doc.shortName, doc.stories.length);
-              /*let first = doc.stories[0];
-              for(let i = 1; i < doc.stories.length; i++) {
-                let d1 = new Date(first.pubDate);
-                let d2 = new Date(doc.stories[i].pubDate);
-                console.log(first.pubDate, doc.stories[i].pubDate, d1, d2, d1 < d2, d1 > d2);
-              }*/
-            });
-  })
-}
-/*let first = doc.stories[0];
-for(let i = 1; i < doc.stories.length; i++) {
-  let d1 = new Date(first.pubDate);
-  let d2 = new Date(doc.stories[i].pubDate);
-  console.log(first.pubDate, doc.stories[i].pubDate, d1, d2, d1 < d2, d1 > d2);
-}*/
+/*********************************************************/
 export function killDupeChilds(err, doc) {
   console.log(err, doc.shortName, doc.stories.length);
   let dupes = {}
@@ -125,22 +160,10 @@ export function getStory() {
       docs.forEach((doc) => {
         let creator = doc._creator;
         doc.source = creator.shortName;
-        doc.save()
-        //creator.stories.push(doc);
-        //creator.save((err) => {console.log('saved', doc.title);});
+        doc.save((err) => {console.log('saved');})
       })
     }
   });
-  return;
-}
-
-export function updateLastBuildDate(channel) {
-  Story.findOne({source: channel}).populate('_creator').sort({pubDate:-1}).exec((err, doc) => {
-    if(!err) {
-      doc._creator.lastBuildDate = doc.pubDate;
-      doc._creator.save((err) => {console.log('updated successfully bruh')});
-    }
-  })
 }
 
 export function removeChannel(channel) {
@@ -153,6 +176,22 @@ export function removeChannel(channel) {
     })
   })
 }
+
+export function cleanDB() {
+  Story.find({}).exec((err, docs) => {
+    docs.forEach((doc) => {
+      if(doc.source === undefined) {
+        doc.remove((removed) => {console.log('removed')});
+      }
+    })
+  })
+}
+
+//getStory();
+//updateBuildDates();
+//cleanDB();
+//['cnn', 'fox', 'npr', 'breitbart', 'bbc', 'slate', 'hill'].forEach((channel) => {updateBuildDate(channel)});
+//updateBuildDates();
 //removeChannel('drudge');
 /*Channel.find({}).exec().then((docs) => {
   console.log(docs)
