@@ -121,4 +121,14 @@ function fetchChannels() {
   });
 }
 
-updateChannel('cnn');
+function getMediaRss(url) {
+  return fetch(url).then(function (result) {
+    return result.text();
+  }).then(function (body) {
+    console.log(body);
+  }).catch(function (err) {
+    console.error(err);
+  });
+}
+getMediaRss('http://rss.cnn.com/rss/cnn_freevideo.mrss');
+//updateChannel('cnn');

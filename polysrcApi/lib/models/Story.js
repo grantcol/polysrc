@@ -10,7 +10,7 @@ var storySchema = _mongoose2.default.Schema({
   title: String,
   author: String,
   description: String,
-  url: { type: String, unique: true },
+  url: String,
   media: [{}],
   source: String,
   category: String,

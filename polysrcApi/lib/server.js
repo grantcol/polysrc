@@ -4,6 +4,8 @@ var _express = require("express");
 
 var _express2 = _interopRequireDefault(_express);
 
+var _http = require("http");
+
 var _request = require("request");
 
 var _request2 = _interopRequireDefault(_request);
@@ -28,6 +30,8 @@ var _localData = require("./data/localData.js");
 
 var _polysrc_config = require("./polysrc_config.js");
 
+var _tasks = require("./util/tasks.js");
+
 var _manager = require("./util/manager.js");
 
 var _manager2 = _interopRequireDefault(_manager);
@@ -44,17 +48,20 @@ require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
 var app = (0, _express2.default)();
-var server = app.listen(8080);
-var io = require('socket.io').listen(server);
+var server = (0, _http.Server)(app);
+var io = require('socket.io')(server);
 var updated = false;
-
 var db = _mongoose2.default.createConnection(_polysrc_config.DB_URI);
+var toMill = function toMill(minutes) {
+  return minutes * 60 * 1000;
+};
 
+console.log(server);
 io.on('connection', function (socket) {
   console.log('a user connected');
-  jobs.updateFeed(socket);
-  //jobs.testUpdate(10000, socket);
-  //socket.emit('feed-update', updatePayload);
+  socket.on('disconnect', function () {
+    console.log('a user disconnected');
+  });
 });
 
 app.use(function (req, res, next) {
@@ -83,7 +90,34 @@ app.get('/stories', function (req, res) {
   if (db) {
     _Story2.default.find({}).sort({ pubDate: -1 }).populate('_creator').limit(25).exec(function (error, docs) {
       if (!error) {
-        res.status(200).send(docs);
+        var stories = (0, _tasks.deDupeUrl)(docs);
+        res.status(200).send(stories);
+      } else {
+        res.status(500).send(error);
+      }
+    });
+  }
+});
+
+app.get('/tv', function (req, res) {
+  if (db) {
+    _Story2.default.find({ type: 'video' }).sort({ pubDate: -1 }).populate('_creator').limit(25).exec(function (error, docs) {
+      if (!error) {
+        var stories = (0, _tasks.deDupeUrl)(docs);
+        res.status(200).send(stories);
+      } else {
+        res.status(500).send(error);
+      }
+    });
+  }
+});
+
+app.get('fm', function (req, res) {
+  if (db) {
+    _Story2.default.find({ type: 'audio' }).sort({ pubDate: -1 }).populate('_creator').limit(25).exec(function (error, docs) {
+      if (!error) {
+        var stories = (0, _tasks.deDupeUrl)(docs);
+        res.status(200).send(stories);
       } else {
         res.status(500).send(error);
       }
@@ -113,4 +147,13 @@ app.get('/channel/:id', function (req, res) {
       }
     });
   }
+});
+
+server.listen(8080, function () {
+  console.log('listening on *:8080');
+  console.log('hitting on all 6 cylinders');
+  var jobId = setInterval(function () {
+    console.log('checking for updates');
+    jobs.updateFeed(io);
+  }, toMill(15));
 });

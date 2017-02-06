@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
 
-export default class Story extends React.Component {
+export default class Story extends Component {
   renderImages(){
     let s = this.props.story.media;
-    return s.map(function(story){ return <img src={story.url} width={story.width} height={story.width}/>})
+    return s.map(function(story){ return <img src={story.url} width={story.width} height={story.width} role="presentation"/>})
   }
 
   render() {
@@ -15,7 +15,7 @@ export default class Story extends React.Component {
       <div className="media">
         <div className="media-left">
           <a href="#">
-            <img className="media-object" src={image} width={90} height={75}/>
+            <img className="media-object" src={image} width={90} height={75} role="presentation"/>
           </a>
         </div>
         <div className="media-body">

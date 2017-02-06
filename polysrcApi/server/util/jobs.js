@@ -13,12 +13,14 @@ export function updateFeed(socket = null){
     .then((storyModels) => {
       Promise.all(storyModels)
       .then((stories) => {
-        console.log("STORIES RETURNED", stories.length, stories[0]);
+        console.log(`${stories.length} STORIES RETURNED`);
         //once we've saved all the stories we can update the channel object with a new builddate
         //this actually returns stories for us to send to the client
-        if(socket !== null) { socket.emit('feed-update', stories); }
-        else { console.log('no socket supplied!'); }
-        return updateBuildDates()
+        if(stories.length > 0) {
+          if(socket !== null) { socket.emit('feed-update', stories); }
+          else { console.log('no socket supplied!'); }
+          updateBuildDates()
+        }
       })
     })
     .catch((err) => { console.log('error fetching the feeds!', err); });
@@ -27,11 +29,11 @@ export function updateFeed(socket = null){
 }
 
 export function testUpdate(interval, socket = null) {
-  if(socket === null) return false;
+  //if(socket === null) return false;
   return setInterval(() => {
     console.log('checking for new stuff');
     console.log('found some new stuff');
-    socket.emit('test-update', {status:200, msg:'testing is going well i think'});
+  
   }, interval);
 }
 

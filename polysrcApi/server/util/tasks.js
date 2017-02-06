@@ -40,13 +40,12 @@ export function injestNews(name, json, lastBuildDate) {
   let stories = json.rss.channel.item;
   let storyModels = [];
   stories.forEach((story) => {
-    if(moment(story.pubDate).isAfter(lastBuildDate)){
+    if(moment(story.pubDate).isAfter(moment(lastBuildDate))){
       let storyModel = makeStory(story, channelIds[name], name);
       console.log(`\t id: ${storyModel._id} title: ${storyModel.title}`)
-       storyModels.push(storyModel.save());
+      storyModels.push(storyModel.save());
     }
   });
-  //console.log(storyModels);
   return storyModels;
 }
 
@@ -72,32 +71,31 @@ export function fetchNews(name, url, lastBuildDate) {
 export function updateBuildDates() {
   return Channel.find({})
          .exec()
-         .then((docs) => { return docs.map((doc) => { return getChannelStories(doc.shortName) }); })
-         .then((docPromises) => { return Promise.all(docPromises); })
-         .then((docs) => { console.log('successfully updated pubDates') })
+         .then((docs) => { return docs.map((doc) => { return updateBuildDate(doc.shortName) }); })
+         //.then((docPromises) => { return Promise.all(docPromises); })
+         //.then((docs) => { console.log('successfully updated pubDates') })
          .catch((err) => { console.log('error in updating pubDates')});
 }
 
 export function updateBuildDate(channel) {
-    Story.find({source:channel})
+    Story.findOne({source:channel})
     .populate('_creator')
     .sort({pubDate:-1})
     .exec()
-    .then((docs) => {
+    .then((doc) => {
       //.format("dddd, MMMM Do YYYY, h:mm:ss a")
-      let source = moment(docs[0]._creator.lastBuildDate);
-      docs.forEach((doc) => {
-        let date = moment(doc.pubDate);
-        let isAfter = date.isAfter(source);
-        if(isAfter) {
-          doc._creator.lastBuildDate = new Date(doc.pubDate);
-          doc._creator.save((err) => {
-            if(err) console.log(err)
-            else console.log(_doc._creator.lastBuildDate);
-          });
-        }
-      });
-    })
+      let source = moment(doc._creator.lastBuildDate);
+      let date = moment(doc.pubDate);
+      let isAfter = date.isAfter(source);
+      if(isAfter) {
+        doc._creator.lastBuildDate = new Date(doc.pubDate);
+        //console.log(doc._creator.shortName, moment(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"))
+        doc._creator.save((err) => {
+          if(err) console.log(err)
+          else console.log(doc._creator.shortName, moment(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"));
+        });
+      }
+    });
 }
 
 export function getChannelStories(channel) {
@@ -166,6 +164,28 @@ export function getStory() {
   });
 }
 
+export function deDupeUrl(stories) {
+    let dupes = {}
+    stories.forEach((story) => {
+      if(dupes[story.url] === undefined) {
+        //if no entry exists yet then add an entry
+        dupes[story.url] = story;
+      } else if ( moment(dupes[story.url].pubDate).isBefore(moment(story.pubDate)) ) {
+        //if the duplicate is newer than replace the one that exists
+        dupes[story.url] = story;
+      } else {
+        //remove it from the db
+        Story.findById(story._id, (err, doc) => {
+          if(!err){
+            if(doc !== undefined) doc.remove();
+          }
+        });
+      }
+    });
+    let deDupedStories = Object.keys(dupes).map((key) => { return dupes[key]; });
+    return deDupedStories;
+}
+
 export function removeChannel(channel) {
   Story.find({}).populate('_creator').exec((err, docs) => {
     console.log(docs.length);
@@ -186,6 +206,7 @@ export function cleanDB() {
     })
   })
 }
+
 
 //getStory();
 //updateBuildDates();

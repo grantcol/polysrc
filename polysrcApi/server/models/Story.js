@@ -7,7 +7,7 @@ let storySchema = mongoose.Schema({
 	title: String,
   author: String,
   description: String,
-  url: {type:String, unique:true},
+  url: String,
   media: [{}],
   source: String,
   category: String,

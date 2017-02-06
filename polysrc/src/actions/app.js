@@ -53,6 +53,12 @@ export function receiveNewStories(stories, status) {
   }
 }
 
+export function showNewStories() {
+  return {
+    type : constants.SHOW_NEW_STORIES
+  }
+}
+
 export function getChannel(channel) {
   return {
     type : constants.GET_CHANNEL,
@@ -66,6 +72,20 @@ export function receiveChannel(channel, status) {
     type : constants.RECEIVE_CHANNEL,
     channel : channel,
     status : status
+  }
+}
+
+export function addFilter(channel) {
+  return {
+    type : constants.ADD_FILTER,
+    channel : channel
+  }
+}
+
+export function removeFilter(channel) {
+  return {
+    type : constants.REMOVE_FILTER,
+    channel : channel
   }
 }
 

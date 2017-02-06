@@ -13,6 +13,7 @@ exports.getStoriesAfter = getStoriesAfter;
 exports.testFetchFeeds = testFetchFeeds;
 exports.killDupeChilds = killDupeChilds;
 exports.getStory = getStory;
+exports.deDupeUrl = deDupeUrl;
 exports.removeChannel = removeChannel;
 exports.cleanDB = cleanDB;
 
@@ -87,13 +88,12 @@ function injestNews(name, json, lastBuildDate) {
   var stories = json.rss.channel.item;
   var storyModels = [];
   stories.forEach(function (story) {
-    if ((0, _moment2.default)(story.pubDate).isAfter(lastBuildDate)) {
+    if ((0, _moment2.default)(story.pubDate).isAfter((0, _moment2.default)(lastBuildDate))) {
       var storyModel = (0, _modelGenerators.makeStory)(story, _localData.channelIds[name], name);
       console.log('\t id: ' + storyModel._id + ' title: ' + storyModel.title);
       storyModels.push(storyModel.save());
     }
   });
-  //console.log(storyModels);
   return storyModels;
 }
 
@@ -122,31 +122,29 @@ function fetchNews(name, url, lastBuildDate) {
 function updateBuildDates() {
   return _Channel2.default.find({}).exec().then(function (docs) {
     return docs.map(function (doc) {
-      return getChannelStories(doc.shortName);
+      return updateBuildDate(doc.shortName);
     });
-  }).then(function (docPromises) {
-    return Promise.all(docPromises);
-  }).then(function (docs) {
-    console.log('successfully updated pubDates');
-  }).catch(function (err) {
+  })
+  //.then((docPromises) => { return Promise.all(docPromises); })
+  //.then((docs) => { console.log('successfully updated pubDates') })
+  .catch(function (err) {
     console.log('error in updating pubDates');
   });
 }
 
 function updateBuildDate(channel) {
-  _Story2.default.find({ source: channel }).populate('_creator').sort({ pubDate: -1 }).exec().then(function (docs) {
+  _Story2.default.findOne({ source: channel }).populate('_creator').sort({ pubDate: -1 }).exec().then(function (doc) {
     //.format("dddd, MMMM Do YYYY, h:mm:ss a")
-    var source = (0, _moment2.default)(docs[0]._creator.lastBuildDate);
-    docs.forEach(function (doc) {
-      var date = (0, _moment2.default)(doc.pubDate);
-      var isAfter = date.isAfter(source);
-      if (isAfter) {
-        doc._creator.lastBuildDate = new Date(doc.pubDate);
-        doc._creator.save(function (err) {
-          if (err) console.log(err);else console.log(_doc._creator.lastBuildDate);
-        });
-      }
-    });
+    var source = (0, _moment2.default)(doc._creator.lastBuildDate);
+    var date = (0, _moment2.default)(doc.pubDate);
+    var isAfter = date.isAfter(source);
+    if (isAfter) {
+      doc._creator.lastBuildDate = new Date(doc.pubDate);
+      //console.log(doc._creator.shortName, moment(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"))
+      doc._creator.save(function (err) {
+        if (err) console.log(err);else console.log(doc._creator.shortName, (0, _moment2.default)(doc._creator.lastBuildDate).format("dddd, MMMM Do YYYY, h:mm:ss a"));
+      });
+    }
   });
 }
 
@@ -215,6 +213,30 @@ function getStory() {
       });
     }
   });
+}
+
+function deDupeUrl(stories) {
+  var dupes = {};
+  stories.forEach(function (story) {
+    if (dupes[story.url] === undefined) {
+      //if no entry exists yet then add an entry
+      dupes[story.url] = story;
+    } else if ((0, _moment2.default)(dupes[story.url].pubDate).isBefore((0, _moment2.default)(story.pubDate))) {
+      //if the duplicate is newer than replace the one that exists
+      dupes[story.url] = story;
+    } else {
+      //remove it from the db
+      _Story2.default.findById(story._id, function (err, doc) {
+        if (!err) {
+          if (doc !== undefined) doc.remove();
+        }
+      });
+    }
+  });
+  var deDupedStories = Object.keys(dupes).map(function (key) {
+    return dupes[key];
+  });
+  return deDupedStories;
 }
 
 function removeChannel(channel) {

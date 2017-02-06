@@ -1,4 +1,5 @@
 import express  from "express";
+import {Server} from 'http';
 import request  from "request";
 import xml2js from "xml2js";
 import mongoose from "mongoose";
@@ -6,23 +7,25 @@ import Story from './models/Story.js';
 import Channel from './models/Channel';
 import { updatePayload } from './data/localData.js';
 import { DB_URI } from './polysrc_config.js';
+import { deDupeUrl } from './util/tasks.js';
 import Manager from './util/manager.js';
 import * as jobs from './util/jobs.js';
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
 let app = express();
-let server = app.listen(8080);
-let io = require('socket.io').listen(server);
+let server = Server(app);
+let io = require('socket.io')(server);
 let updated = false;
-
 let db = mongoose.createConnection(DB_URI);
+const toMill = (minutes) => { return minutes*60*1000; }
 
+console.log(server);
 io.on('connection', function(socket){
   console.log('a user connected');
-  jobs.updateFeed(socket);
-  //jobs.testUpdate(10000, socket);
-  //socket.emit('feed-update', updatePayload);
+  socket.on('disconnect', function() {
+    console.log('a user disconnected');
+  });
 });
 
 app.use(function(req, res, next) {
@@ -52,7 +55,34 @@ app.get('/stories', function(req, res){
   if(db){
     Story.find({}).sort({pubDate: -1}).populate('_creator').limit(25).exec((error, docs) => {
       if(!error){
-        res.status(200).send(docs);
+        let stories = deDupeUrl(docs);
+        res.status(200).send(stories);
+      } else {
+        res.status(500).send(error);
+      }
+    });
+  }
+});
+
+app.get('/tv', function(req, res){
+  if(db){
+    Story.find({type:'video'}).sort({pubDate:-1}).populate('_creator').limit(25).exec((error, docs) => {
+      if(!error){
+        let stories = deDupeUrl(docs);
+        res.status(200).send(stories);
+      } else {
+        res.status(500).send(error);
+      }
+    });
+  }
+});
+
+app.get('fm', function(req, res){
+  if(db){
+    Story.find({type:'audio'}).sort({pubDate:-1}).populate('_creator').limit(25).exec((error, docs) => {
+      if(!error){
+        let stories = deDupeUrl(docs);
+        res.status(200).send(stories);
       } else {
         res.status(500).send(error);
       }
@@ -82,4 +112,13 @@ app.get('/channel/:id', function(req, res){
       }
     });
   }
+});
+
+server.listen(8080, function() {
+  console.log('listening on *:8080');
+  console.log('hitting on all 6 cylinders');
+  let jobId = setInterval(() => {
+    console.log('checking for updates');
+    jobs.updateFeed(io)
+  }, toMill(15));
 });
