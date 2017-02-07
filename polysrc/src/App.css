@@ -33,3 +33,51 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/*
+ * Header
+ */
+.masthead {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.masthead-brand {
+  margin-top: 10px;
+}
+
+.masthead-nav > li {
+  display: inline-block;
+}
+.masthead-nav > li + li {
+  margin-left: 20px;
+}
+.masthead-nav > li > a {
+  padding-right: 0;
+  padding-left: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #777; /* IE8 proofing */
+  /*border-bottom: 2px solid transparent;*/
+}
+.masthead-nav > li > a:hover,
+.masthead-nav > li > a:focus {
+  background-color: transparent;
+  border-bottom-color: #a9a9a9;
+  border-bottom-color: rgba(255,255,255,.25);
+}
+.masthead-nav > .active > a,
+.masthead-nav > .active > a:hover,
+.masthead-nav > .active > a:focus {
+  color: #e74c3c;
+  /*border-bottom-color: #e74c3c;*/
+}
+
+@media (min-width: 768px) {
+  .masthead-brand {
+    float: left;
+  }
+  .masthead-nav {
+    float: right;
+  }
+}

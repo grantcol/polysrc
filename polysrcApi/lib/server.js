@@ -155,5 +155,5 @@ server.listen(8080, function () {
   var jobId = setInterval(function () {
     console.log('checking for updates');
     jobs.updateFeed(io);
-  }, toMill(15));
+  }, 10000);
 });
