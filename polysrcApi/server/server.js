@@ -10,6 +10,8 @@ import { DB_URI } from './polysrc_config.js';
 import { deDupeUrl } from './util/tasks.js';
 import Manager from './util/manager.js';
 import * as jobs from './util/jobs.js';
+import { exec } from 'child_process';
+
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
@@ -20,7 +22,6 @@ let updated = false;
 let db = mongoose.createConnection(DB_URI);
 const toMill = (minutes) => { return minutes*60*1000; }
 
-console.log(server);
 io.on('connection', function(socket){
   console.log('a user connected');
   socket.on('disconnect', function() {
@@ -118,7 +119,8 @@ server.listen(8080, function() {
   console.log('listening on *:8080');
   console.log('hitting on all 6 cylinders');
   let jobId = setInterval(() => {
-    console.log('checking for updates');
+    console.log('launching update process');
+    //exec('node ../scripts/fetchNews.js')
     jobs.updateFeed(io)
   }, toMill(15));
 });

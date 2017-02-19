@@ -40,10 +40,10 @@ class App extends Component {
           <div className="masthead clearfix">
             <nav>
               <ul className="nav masthead-nav pull-right">
-                <li role="presentation" className="active"><IndexLink to="/">News</IndexLink></li>
-                <li role="presentation"><Link to="/tv">TV</Link></li>
-                <li role="presentation"><Link to="/about">About</Link></li>
-                <li role="presentation"><Link to="/contact">Contact</Link></li>
+                <li role="presentation"><IndexLink to="/" activeStyle={{color: '#e74c3c'}}>News</IndexLink></li>
+                <li role="presentation"><Link to="/tv" activeStyle={{color: '#e74c3c'}}>TV</Link></li>
+                <li role="presentation"><Link to="/about" activeStyle={{color: '#e74c3c'}}>About</Link></li>
+                <li role="presentation"><Link to="/contact" activeStyle={{color: '#e74c3c'}}>Contact</Link></li>
               </ul>
             </nav>
             <h3 className="masthead-brand text-muted">polysrc {this.renderAlert()}</h3>
